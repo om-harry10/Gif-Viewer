@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   TextInput,
   Switch,
+  TouchableOpacity,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState, useRef, useContext} from 'react';
 import {url, searchUrl} from './Utils/Constants';
@@ -23,6 +25,7 @@ export default function HomeScreen() {
   const [isLoading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [mode, setMode] = useState(false);
+  const [selectedIDs, setSelectedIDs] = useState([]);
   const didMount = useRef(false);
   const theme = useContext(ThemeContext);
 
@@ -42,7 +45,6 @@ export default function HomeScreen() {
   searchGifs = async val => {
     try {
       const newUrl = searchUrl.concat(val).concat(`&page=${currentPage}`);
-      console.log('newUrl= ' + newUrl);
       const response = await fetch(newUrl);
       const json = await response.json();
       setGifData(json.data);
@@ -83,45 +85,56 @@ export default function HomeScreen() {
     setCurrentPage(currentPage + 1);
   };
 
+  const onPress = id => {
+    selectedIDs.includes(id)
+      ? selectedIDs.splice(selectedIDs.indexOf(id), 1)
+      : selectedIDs.push(id);
+    setSelectedIDs([...selectedIDs]);
+  };
+
+  const renderItem = item => {
+    return (
+      <TouchableOpacity
+        onPress={() => onPress(item.id)}
+        style={styles.gifCellStyle}>
+        <Image
+          style={[styles.imageThumbnail]}
+          source={{
+            uri: selectedIDs.includes(item.id)
+              ? item.images.original_still.url
+              : item.images.original.url,
+          }}
+        />
+      </TouchableOpacity>
+    );
+  };
   return (
     <SafeAreaView
       style={[styles.container, {backgroundColor: theme.background}]}>
       {isLoading ? (
-        <View>
+        <View style={[styles.container, {justifyContent: 'center'}]}>
           <ActivityIndicator size="large" color="#00ff00" />
         </View>
       ) : (
-        <View style={{marginVertical: 20}}>
+        <View style={{marginVertical: 10}}>
           <TextInput
             onChangeText={val => onChangeText(val)}
             placeholder="Search..."
             placeholderTextColor={theme.color}
             value={searchQuery}
-            style={{marginTop: 50}}
+            style={{color: theme.color}}
           />
           <Switch
             onValueChange={toggleSwitch}
             trackColor={{false: '#767577', true: '#81b0ff'}}
-            style={{marginBottom: 20, marginRight: 20}}
+            style={styles.switch}
             value={mode}
           />
           <FlatList
             data={gifData}
-            renderItem={({item}) => (
-              <View
-                style={{
-                  flex: 1,
-                  flexDirection: 'column',
-                  margin: 1,
-                }}>
-                <Image
-                  style={[styles.imageThumbnail]}
-                  source={{uri: item.images.original.url}}
-                />
-              </View>
-            )}
+            renderItem={({item}) => renderItem(item)}
             //Setting the number of column
-            numColumns={3}
+            numColumns={2}
             keyExtractor={(item, index) => index}
             ListFooterComponent={renderLoader}
             onEndReached={loadMore}
@@ -137,12 +150,9 @@ const styles = StyleSheet.create({
   container: {
     height: '100%',
     width: '100%',
-    justifyContent: 'center',
   },
   imageThumbnail: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    height: 100,
+    height: 200,
   },
   container1: {
     flex: 1,
@@ -151,6 +161,13 @@ const styles = StyleSheet.create({
   },
   loaderStyle: {
     marginVertical: 15,
-    alignItems: 'center',
   },
+  gifCellStyle: {
+    flex: 1,
+    flexDirection: 'column',
+    margin: 2,
+  },
+  switch: {marginBottom: 20, marginRight: 20},
 });
+
+//{height:parseInt(item.images.original.height), width: parseInt(item.images.original.width)}
